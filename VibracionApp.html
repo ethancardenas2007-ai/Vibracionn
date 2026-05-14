@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Medidor de Vibración</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #0a0a12;
+    --surface: #13131f;
+    --card: #1a1a2e;
+    --accent: #4fc3f7;
+    --danger: #ff6b6b;
+    --muted: #555570;
+    --text: #e8e8f0;
+    --text2: #9090b0;
+    --green: #4ade80;
+    --border: rgba(255,255,255,0.07);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  header {
+    padding: 56px 24px 20px;
+    background: linear-gradient(180deg, rgba(79,195,247,0.08) 0%, transparent 100%);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .pulse-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 0 rgba(74,222,128,0.4);
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(74,222,128,0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(74,222,128,0); }
+    100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--text2);
+    padding-left: 22px;
+  }
+
+  main { padding: 20px 16px; }
+
+  .cards-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 18px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .card.accel::before { background: var(--accent); }
+  .card.pico::before { background: var(--danger); }
+
+  .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .card.accel .card-label { color: var(--accent); }
+  .card.pico .card-label { color: var(--danger); }
+
+  .card-value {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    line-height: 1;
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card.accel .card-value { color: var(--accent); }
+  .card.pico .card-value { color: var(--danger); }
+
+  .card-unit {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .graph-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .graph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .graph-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+
+  .graph-legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  canvas {
+    width: 100%;
+    height: 180px;
+    display: block;
+    border-radius: 10px;
+    background: #0d0d1a;
+  }
+
+  .permission-box {
+    background: var(--card);
+    border: 1px solid rgba(79,195,247,0.3);
+    border-radius: 18px;
+    padding: 32px 24px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .permission-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .permission-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .permission-desc {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .btn-permission {
+    background: var(--accent);
+    color: #0a0a12;
+    border: none;
+    border-radius: 14px;
+    padding: 16px 32px;
+    font-size: 16px;
+    font-weight: 700;
+    width: 100%;
+    cursor: pointer;
+    letter-spacing: -0.3px;
+    transition: opacity 0.15s;
+  }
+
+  .btn-permission:active { opacity: 0.8; }
+
+  .btn-reset {
+    background: transparent;
+    color: var(--danger);
+    border: 1.5px solid var(--danger);
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    width: 100%;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+    margin-bottom: 32px;
+  }
+
+  .btn-reset:active {
+    background: rgba(255,107,107,0.1);
+    transform: scale(0.98);
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  .status-indicator {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+
+  .status-indicator.active { background: var(--green); animation: pulse 2s infinite; }
+  .status-indicator.error { background: var(--danger); }
+
+  .error-box {
+    background: rgba(255,107,107,0.08);
+    border: 1px solid rgba(255,107,107,0.3);
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 13px;
+    color: var(--danger);
+    text-align: center;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  #permissionSection { display: block; }
+  #mainSection { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="pulse-dot" id="headerDot" style="background: var(--muted);"></div>
+    <h1>Medidor de Vibración</h1>
+  </div>
+  <div class="subtitle">Acelerómetro en tiempo real</div>
+</header>
+
+<main>
+
+  <div id="permissionSection">
+    <div class="permission-box">
+      <div class="permission-icon">📡</div>
+      <div class="permission-title">Activar Sensor</div>
+      <div class="permission-desc">
+        En iPhone, Safari requiere que apruebes el acceso al acelerómetro. Toca el botón y acepta el permiso.
+      </div>
+      <button class="btn-permission" onclick="requestPermission()">Activar Acelerómetro</button>
+    </div>
+    <div id="errorMsg" class="error-box" style="display:none;"></div>
+  </div>
+
+  <div id="mainSection">
+    <div class="status-bar">
+      <div class="status-indicator active" id="statusDot"></div>
+      <span id="statusText">Monitoreando...</span>
+    </div>
+
+    <div class="cards-row">
+      <div class="card accel">
+        <div class="card-label">Aceleración Z</div>
+        <div class="card-value" id="valZ">0.00</div>
+        <div class="card-unit">m/s²</div>
+      </div>
+      <div class="card pico">
+        <div class="card-label">Pico Máximo</div>
+        <div class="card-value" id="valMax">0.00</div>
+        <div class="card-unit">m/s²</div>
+      </div>
+    </div>
+
+    <div class="graph-section">
+      <div class="graph-header">
+        <div class="graph-title">Gráfica en tiempo real</div>
+        <div class="graph-legend">
+          <div class="legend-dot"></div>
+          <span>Magnitud</span>
+        </div>
+      </div>
+      <canvas id="graph"></canvas>
+    </div>
+
+    <button class="btn-reset" onclick="resetValues()">⟳ &nbsp;RESET</button>
+  </div>
+
+</main>
+
+<script>
+const STORAGE_KEY = 'vibracion_max_v1';
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+
+let vibracionMax = 0;
+let grafX = 0;
+let grafPrev = null;
+let active = false;
+let readings = [];
+const MAX_POINTS = 200;
+
+function loadMax() {
+  try {
+    const v = localStorage.getItem(STORAGE_KEY);
+    if (v !== null) {
+      vibracionMax = parseFloat(v) || 0;
+      document.getElementById('valMax').textContent = vibracionMax.toFixed(2);
+    }
+  } catch(e) {}
+}
+
+function saveMax(v) {
+  try { localStorage.setItem(STORAGE_KEY, v); } catch(e) {}
+}
+
+function resetValues() {
+  vibracionMax = 0;
+  document.getElementById('valMax').textContent = '0.00';
+  document.getElementById('valZ').textContent = '0.00';
+  readings = [];
+  grafX = 0;
+  grafPrev = null;
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  resizeCanvas();
+}
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.offsetWidth;
+  const h = canvas.offsetHeight;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#0d0d1a';
+  ctx.fillRect(0, 0, w, h);
+  drawGrid(w, h);
+}
+
+function drawGrid(w, h) {
+  ctx.strokeStyle = 'rgba(79,195,247,0.06)';
+  ctx.lineWidth = 0.5;
+  const lines = 4;
+  for (let i = 1; i < lines; i++) {
+    const y = (h / lines) * i;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(79,195,247,0.15)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(w, h / 2);
+  ctx.stroke();
+}
+
+function updateGraph(value) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.width / dpr;
+  const h = canvas.height / dpr;
+
+  readings.push(value);
+  if (readings.length > MAX_POINTS) readings.shift();
+
+  ctx.fillStyle = '#0d0d1a';
+  ctx.fillRect(0, 0, w, h);
+  drawGrid(w, h);
+
+  if (readings.length < 2) return;
+
+  const maxVal = Math.max(...readings, 15);
+  const stepX = w / (MAX_POINTS - 1);
+
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(79,195,247,0.3)';
+  ctx.lineWidth = 1;
+
+  for (let i = 0; i < readings.length; i++) {
+    const x = i * stepX;
+    const y = h - (readings[i] / maxVal) * (h * 0.85) - h * 0.05;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.strokeStyle = '#4fc3f7';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = '#4fc3f7';
+  ctx.shadowBlur = 4;
+
+  const start = Math.max(0, readings.length - 80);
+  for (let i = start; i < readings.length; i++) {
+    const x = i * stepX;
+    const y = h - (readings[i] / maxVal) * (h * 0.85) - h * 0.05;
+    if (i === start) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function handleMotion(e) {
+  const acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc) return;
+
+  const x = acc.x || 0;
+  const y = acc.y || 0;
+  const z = acc.z || 0;
+  const mag = Math.sqrt(x*x + y*y + z*z);
+
+  document.getElementById('valZ').textContent = mag.toFixed(2);
+
+  if (mag > vibracionMax) {
+    vibracionMax = mag;
+    document.getElementById('valMax').textContent = vibracionMax.toFixed(2);
+    saveMax(vibracionMax);
+  }
+
+  updateGraph(mag);
+}
+
+function startListening() {
+  window.addEventListener('devicemotion', handleMotion, true);
+  active = true;
+  document.getElementById('headerDot').style.background = 'var(--green)';
+  document.getElementById('permissionSection').style.display = 'none';
+  document.getElementById('mainSection').style.display = 'block';
+  setTimeout(resizeCanvas, 100);
+}
+
+async function requestPermission() {
+  if (typeof DeviceMotionEvent === 'undefined') {
+    showError('Tu dispositivo no soporta el acelerómetro o estás usando un navegador incompatible.');
+    return;
+  }
+
+  if (typeof DeviceMotionEvent.requestPermission === 'function') {
+    try {
+      const result = await DeviceMotionEvent.requestPermission();
+      if (result === 'granted') {
+        startListening();
+      } else {
+        showError('Permiso denegado. Ve a Configuración > Safari > Movimiento y orientación, y actívalo.');
+      }
+    } catch(e) {
+      showError('Error al solicitar permiso: ' + e.message + '. Asegúrate de estar en Safari con HTTPS.');
+    }
+  } else {
+    startListening();
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+loadMax();
+window.addEventListener('resize', () => { if (active) resizeCanvas(); });
+</script>
+</body>
+</html>
